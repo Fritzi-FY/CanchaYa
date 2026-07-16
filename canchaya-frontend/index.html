@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CanchaYA - Sistema de Reservas Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const API_URL = "http://localhost:3000/api";
+
+        const HORAS_OPERATIVAS = [
+            "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
+            "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
+            "20:00", "21:00", "22:00"
+        ];
+
+        function App() {
+            const [token, setToken] = useState(localStorage.getItem("token") || "");
+            const [usuarioRol, setUsuarioRol] = useState(localStorage.getItem("rol") || "CLIENTE");
+            const [vista, setVista] = useState(token ? "reservas" : "login"); // 'login', 'registro', 'reservas'
+            const [subVistaAdmin, setSubVistaAdmin] = useState(false);
+
+            const [email, setEmail] = useState("");
+            const [password, setPassword] = useState("");
+            const [nombre, setNombre] = useState("");
+
+            // Estados del Calendario
+            const [canchaId, setCanchaId] = useState("1");
+            const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+            const [misReservas, setMisReservas] = useState([]);
+            const [todasLasReservas, setTodasLasReservas] = useState([]);
+
+            // Notificaciones Flotantes
+            const [notificaciones, setNotificaciones] = useState([]);
+
+            // Estados Pasarela
+            const [mostrarPasarela, setMostrarPasarela] = useState(false);
+            const [slotParaReservar, setSlotParaReservar] = useState(null);
+            const [tiempoRestante, setTiempoRestante] = useState(300);
+            const [procesandoPago, setProcesandoPago] = useState(false);
+
+            // Referencias Charts
+            const chartBarrasRef = useRef(null);
+            const chartLineasRef = useRef(null);
+            const instanciasCharts = useRef({ barras: null, lineas: null });
+
+            useEffect(() => {
+                if (token) {
+                    cargarMisReservas();
+                    cargarOcupacionCalendario();
+                }
+            }, [token, fecha, canchaId]);
+
+            useEffect(() => {
+                if (subVistaAdmin && todasLasReservas.length > 0) {
+                    construirGraficos();
+                }
+            }, [subVistaAdmin, todasLasReservas]);
+
+            useEffect(() => {
+                if (!mostrarPasarela) return;
+                if (tiempoRestante <= 0) {
+                    setMostrarPasarela(false);
+                    setSlotParaReservar(null);
+                    agregarNotificacion("Tiempo de pago expirado. El slot fue liberado.", "error");
+                    return;
+                }
+                const timer = setInterval(() => setTiempoRestante(prev => prev - 1), 1000);
+                return () => clearInterval(timer);
+            }, [tiempoRestante, mostrarPasarela]);
+
+            const agregarNotificacion = (texto, tipo = "success") => {
+                const id = Date.now();
+                setNotificaciones(prev => [...prev, { id, texto, tipo }]);
+                setTimeout(() => {
+                    setNotificaciones(prev => prev.filter(n => n.id !== id));
+                }, 4500);
+            };
+
+            const cargarMisReservas = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/reservas/me`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (res.ok) setMisReservas(data);
+                } catch (err) { console.error(err); }
+            };
+
+            const cargarOcupacionCalendario = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/reservas`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (res.ok) setTodasLasReservas(data);
+                } catch (err) { console.error(err); }
+            };
+
+            const comprobarHoraOcupada = (hora) => {
+                const ocupadasFiltradas = todasLasReservas.filter(r =>
+                    r.cancha_id === parseInt(canchaId) && r.fecha_reserva === fecha && r.estado !== "CANCELADO"
+                );
+                return ocupadasFiltradas.some(r => {
+                    const inicio = r.hora_inicio.substring(0, 5);
+                    const fin = r.hora_fin.substring(0, 5);
+                    return hora >= inicio && hora < fin;
+                });
+            };
+
+            const construirGraficos = () => {
+                if (instanciasCharts.current.barras) instanciasCharts.current.barras.destroy();
+                if (instanciasCharts.current.lineas) instanciasCharts.current.lineas.destroy();
+
+                let ingresosCancha1 = 0, ingresosCancha2 = 0;
+                todasLasReservas.forEach(r => {
+                    if (r.estado !== "CANCELADO") {
+                        if (r.cancha_id === 1) ingresosCancha1 += parseFloat(r.total_pago || 60);
+                        if (r.cancha_id === 2) ingresosCancha2 += parseFloat(r.total_pago || 40);
+                    }
+                });
+
+                const conteoHoras = {};
+                HORAS_OPERATIVAS.forEach(h => conteoHoras[h] = 0);
+                todasLasReservas.forEach(r => {
+                    if (r.estado !== "CANCELADO") {
+                        const ini = r.hora_inicio.substring(0, 5);
+                        if (conteoHoras[ini] !== undefined) conteoHoras[ini]++;
+                    }
+                });
+
+                if (chartBarrasRef.current) {
+                    instanciasCharts.current.barras = new Chart(chartBarrasRef.current, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Maracaná Grass 1', 'Bernabéu Losa'],
+                            datasets: [{ label: 'Recaudación Total (S/.)', data: [ingresosCancha1, ingresosCancha2], backgroundColor: ['#16a34a', '#2563eb'], borderRadius: 6 }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+
+                if (chartLineasRef.current) {
+                    instanciasCharts.current.lineas = new Chart(chartLineasRef.current, {
+                        type: 'line',
+                        data: {
+                            labels: Object.keys(conteoHoras),
+                            datasets: [{ label: 'Reservas por Horario', data: Object.values(conteoHoras), borderColor: '#ea580c', backgroundColor: 'rgba(234, 88, 12, 0.1)', tension: 0.3, fill: true }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+            };
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                try {
+                    const res = await fetch(`${API_URL}/auth/login`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        localStorage.setItem("token", data.token);
+                        const rolDetectado = email.includes("admin") ? "ADMIN" : "CLIENTE";
+                        localStorage.setItem("rol", rolDetectado);
+
+                        setToken(data.token);
+                        setUsuarioRol(rolDetectado);
+                        setVista("reservas");
+                        agregarNotificacion(`¡Sesión iniciada con éxito!`, "success");
+                    } else {
+                        agregarNotificacion(data.error || "Credenciales incorrectas", "error");
+                    }
+                } catch (err) { agregarNotificacion("Error de servidor", "error"); }
+            };
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                try {
+                    // Quitamos el campo 'rol' de aquí para que tu backend no lance Error 500
+                    const res = await fetch(`${API_URL}/auth/register`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nombre, email, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setVista("login");
+                        agregarNotificacion("¡Registro exitoso! Ya puedes iniciar sesión.", "success");
+                    } else {
+                        agregarNotificacion(data.error || "Error en el registro", "error");
+                    }
+                } catch (err) { agregarNotificacion("Error al registrar usuario", "error"); }
+            };
+
+            const iniciarFlujoPago = (horaSlot) => {
+                const costo = canchaId === "1" ? 60 : 40;
+                setSlotParaReservar({ horaInicio: horaSlot, horaFin: `${String(parseInt(horaSlot) + 1).padStart(2, '0')}:00`, total: costo });
+                setTiempoRestante(300);
+                setMostrarPasarela(true);
+            };
+
+            const ejecutarPagoYReserva = async (e) => {
+                e.preventDefault();
+                setProcesandoPago(true);
+                setTimeout(async () => {
+                    try {
+                        const res = await fetch(`${API_URL}/reservas`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                            body: JSON.stringify({
+                                cancha_id: parseInt(canchaId), fecha_reserva: fecha,
+                                hora_inicio: slotParaReservar.horaInicio, hora_fin: slotParaReservar.horaFin
+                            })
+                        });
+                        if (res.ok) {
+                            setMostrarPasarela(false);
+                            cargarMisReservas();
+                            cargarOcupacionCalendario();
+                            agregarNotificacion("💳 Pago aprobado. ¡Cancha reservada con éxito!", "success");
+                        }
+                    } catch (err) { agregarNotificacion("Error en el pago", "error"); }
+                    finally { setProcesandoPago(false); }
+                }, 1500);
+            };
+
+            const totalIngresosEmpresa = todasLasReservas
+                .filter(r => r.estado !== "CANCELADO")
+                .reduce((acc, current) => acc + parseFloat(current.total_pago || 0), 0);
+
+            const handleLogout = () => {
+                localStorage.clear();
+                setToken(""); setUsuarioRol("CLIENTE"); setVista("login"); setSubVistaAdmin(false);
+                agregarNotificacion("Has cerrado sesión", "info");
+            };
+
+            return (
+                <div className="min-h-screen pb-12 bg-gray-50 relative">
+
+                    {/* CONTENEDOR TOASTS */}
+                    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 w-80 pointer-events-none">
+                        {notificaciones.map(n => (
+                            <div key={n.id} className={`pointer-events-auto p-4 rounded-xl shadow-xl border text-white flex items-start gap-3 transition-all duration-300
+                                ${n.tipo === 'success' ? 'bg-emerald-600 border-emerald-400' : n.tipo === 'error' ? 'bg-rose-600 border-rose-400' : 'bg-blue-600 border-blue-400'}`}>
+                                <span className="text-xl">{n.tipo === 'success' ? '⚡' : n.tipo === 'error' ? '🚫' : '💡'}</span>
+                                <div className="flex-1 text-xs font-semibold">{n.texto}</div>
+                                <button onClick={() => setNotificaciones(prev => prev.filter(item => item.id !== n.id))} className="text-white opacity-60 font-bold">×</button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Navbar */}
+                    <nav className="bg-green-600 text-white p-4 shadow-md flex justify-between items-center">
+                        <div className="flex items-center gap-6">
+                            <h1 className="text-2xl font-bold font-mono tracking-wider">⚽ CanchaYA</h1>
+                            {token && usuarioRol === "ADMIN" && (
+                                <div className="bg-green-800 rounded-lg p-0.5 flex text-xs font-semibold">
+                                    <button onClick={() => setSubVistaAdmin(false)} className={`px-3 py-1.5 rounded-md transition ${!subVistaAdmin ? 'bg-white text-green-900 shadow' : 'text-green-200'}`}>📅 Módulo Reservas</button>
+                                    <button onClick={() => setSubVistaAdmin(true)} className={`px-3 py-1.5 rounded-md transition ${subVistaAdmin ? 'bg-white text-green-900 shadow' : 'text-green-200'}`}>📊 Panel Negocio (Admin)</button>
+                                </div>
+                            )}
+                        </div>
+                        {token && (
+                            <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 px-4 py-2 rounded text-sm font-semibold transition">Cerrar Sesión</button>
+                        )}
+                    </nav>
+
+                    <div className="max-w-6xl mx-auto p-6">
+
+                        {/* VISTA: LOGIN */}
+                        {vista === "login" && (
+                            <div className="bg-white p-8 rounded shadow-md max-w-md mx-auto mt-10">
+                                <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Iniciar Sesión</h2>
+                                <form onSubmit={handleLogin} className="space-y-4">
+                                    <input type="email" placeholder="Correo electrónico" required onChange={e => setEmail(e.target.value)} className="w-full p-2.5 border rounded focus:outline-green-500" />
+                                    <input type="password" placeholder="Contraseña" required onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded focus:outline-green-500" />
+                                    <button type="submit" className="w-full bg-green-600 text-white p-2.5 rounded font-bold hover:bg-green-700 transition">Ingresar</button>
+                                </form>
+                                <p className="text-xs text-center mt-4 text-gray-600">
+                                    ¿No tienes cuenta? <button onClick={() => setVista("registro")} className="text-green-600 font-bold underline">Regístrate aquí</button>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* VISTA: REGISTRO (RESTAURADA) */}
+                        {vista === "registro" && (
+                            <div className="bg-white p-8 rounded shadow-md max-w-md mx-auto mt-10">
+                                <h2 className="text-2xl font-bold mb-2 text-gray-800 text-center">Registro de Usuario</h2>
+                                <p className="text-[11px] text-center text-gray-500 mb-4">💡 Si usas un correo que contenga la palabra "admin", el sistema te otorgará rango de administrador.</p>
+                                <form onSubmit={handleRegister} className="space-y-4">
+                                    <input type="text" placeholder="Nombre completo" required onChange={e => setNombre(e.target.value)} className="w-full p-2.5 border rounded focus:outline-green-500" />
+                                    <input type="email" placeholder="ejemplo.admin@canchaya.com" required onChange={e => setEmail(e.target.value)} className="w-full p-2.5 border rounded focus:outline-green-500" />
+                                    <input type="password" placeholder="Contraseña segura" required onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded focus:outline-green-500" />
+                                    <button type="submit" className="w-full bg-green-600 text-white p-2.5 rounded font-bold hover:bg-green-700 transition">Crear mi cuenta</button>
+                                </form>
+                                <p className="text-xs text-center mt-4 text-gray-600">
+                                    ¿Ya tienes cuenta? <button onClick={() => setVista("login")} className="text-green-600 font-bold underline">Inicia sesión aquí</button>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* MÓDULO DE RESERVAS */}
+                        {vista === "reservas" && !subVistaAdmin && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                                <div className="bg-white p-6 rounded shadow-md h-fit">
+                                    <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">🔍 Parámetros</h2>
+                                    <div className="space-y-4">
+                                        <select value={canchaId} onChange={e => setCanchaId(e.target.value)} className="w-full p-2 border rounded">
+                                            <option value="1">Maracaná Grass 1 (S/. 60/hr)</option>
+                                            <option value="2">Bernabéu Losa Multiusos (S/. 40/hr)</option>
+                                        </select>
+                                        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full p-2 border rounded" />
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded shadow-md">
+                                    <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">📅 Horarios Disponibles</h2>
+                                    <div className="grid grid-cols-2 gap-3 max-h-[450px] overflow-y-auto">
+                                        {HORAS_OPERATIVAS.slice(0, -1).map((hora, index) => {
+                                            const ocupado = comprobarHoraOcupada(hora);
+                                            return (
+                                                <button key={index} disabled={ocupado} onClick={() => iniciarFlujoPago(hora)}
+                                                    className={`p-3 rounded-lg font-bold text-center border text-sm transition shadow-sm
+                                                        ${ocupado ? "bg-red-100 text-red-700 border-red-300" : "bg-green-50 text-green-700 border-green-300 hover:bg-green-600 hover:text-white"}`}>
+                                                    {hora} <br /> <span className="text-[10px] font-normal">{ocupado ? "🚫 Cerrado" : "⚡ Alquilar"}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-6 rounded shadow-md">
+                                    <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">📋 Mis Separaciones</h2>
+                                    <div className="space-y-3 max-h-[450px] overflow-y-auto">
+                                        {misReservas.map(res => (
+                                            <div key={res.id} className="border-l-4 border-green-500 bg-gray-50 p-3 rounded shadow-sm text-xs">
+                                                <p className="font-bold">Reserva #00{res.id}</p>
+                                                <p className="text-gray-600 mt-1">📅 {res.fecha_reserva} | ⏰ {res.hora_inicio.substring(0, 5)}</p>
+                                                <p className="text-green-700 font-bold mt-1">S/. {res.total_pago}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PANEL ADMINISTRATIVO */}
+                        {vista === "reservas" && subVistaAdmin && (
+                            <div className="mt-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-600">
+                                        <p className="text-xs font-bold uppercase text-gray-400">Caja General Acumulada</p>
+                                        <p className="text-3xl font-black text-gray-800 mt-1">S/. {totalIngresosEmpresa}.00</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl shadow border-l-4 border-blue-600">
+                                        <p className="text-xs font-bold uppercase text-gray-400">Volumen de Transacciones</p>
+                                        <p className="text-3xl font-black text-gray-800 mt-1">{todasLasReservas.length} Reservas</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl shadow border-l-4 border-orange-500">
+                                        <p className="text-xs font-bold uppercase text-gray-400">Estado Complejo</p>
+                                        <p className="text-3xl font-black text-orange-600 mt-1">100% Sincronizado</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white p-6 rounded-xl shadow"><canvas ref={chartBarrasRef}></canvas></div>
+                                    <div className="bg-white p-6 rounded-xl shadow"><canvas ref={chartLineasRef}></canvas></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* MODAL PASARELA DE PAGO */}
+                    {mostrarPasarela && slotParaReservar && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative">
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">💳 Checkout Pasarela</h3>
+                                <form onSubmit={ejecutarPagoYReserva} className="space-y-4">
+                                    <input type="text" placeholder="Número de Tarjeta" required className="w-full p-2.5 border rounded text-sm font-mono" />
+                                    <div className="flex gap-3 pt-2">
+                                        <button type="button" onClick={() => { setMostrarPasarela(false); agregarNotificacion("Reserva cancelada voluntariamente", "info"); }} className="w-1/3 border p-2.5 rounded text-sm">Cancelar</button>
+                                        <button type="submit" disabled={procesandoPago} className="w-2/3 bg-green-600 text-white p-2.5 rounded font-bold text-sm">
+                                            {procesandoPago ? "Procesando..." : `Pagar S/. ${slotParaReservar.total}`}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
