@@ -25,14 +25,30 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reservas', reservaRoutes);
 app.use('/api/canchas', canchaRoutes);
 
-// Ruta fallback para SPA Frontend en caso de navegación directa
+// Endpoint de salud para monitoreo de despliegue
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'OK', message: 'API CanchaYA operativa' });
+});
+
+// Ruta fallback para SPA Frontend en caso de navegación directa o respuesta API en la raíz
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return next();
   }
   res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
     if (err) {
-      next();
+      if (req.path === '/') {
+        return res.status(200).json({
+          status: 'OK',
+          mensaje: '🚀 API CanchaYA operativa',
+          endpoints: {
+            health: '/api/health',
+            canchas: '/api/canchas',
+            auth: '/api/auth'
+          }
+        });
+      }
+      res.status(404).json({ error: `Ruta no encontrada: ${req.path}` });
     }
   });
 });

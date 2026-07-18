@@ -205,4 +205,102 @@ describe('Pruebas de Integración de Cobertura Máxima (>95%)', () => {
     expect(res.status).toBe(200);
     expect(res.body.message).toContain('desactivada');
   });
+
+  // --- COBERTURA ADICIONAL DE CANCHAS Y MIDDLEWARE (>90% COBERTURA GLOBAL) ---
+  test('TC-I-23: Debe listar canchas sin token usando optionalAuthMiddleware (200)', async () => {
+    const res = await request(app).get('/api/canchas');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test('TC-I-24: Un admin debe listar todas las canchas (activas e inactivas) enviando su token (200)', async () => {
+    const res = await request(app)
+      .get('/api/canchas')
+      .set('Authorization', `Bearer ${tokenAdmin}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test('TC-I-25: Un admin debe poder actualizar una cancha existente (200)', async () => {
+    const res = await request(app)
+      .put('/api/canchas/1')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ nombre: 'Estadio Principal Renovado', tipo_suelo: 'Sintético', precio_hora: 60, deporte: 'FÚTBOL', activo: true });
+    
+    expect(res.status).toBe(200);
+    expect(res.body.nombre).toBe('Estadio Principal Renovado');
+  });
+
+  test('TC-I-26: Debe retornar 404 si se intenta actualizar una cancha inexistente (404)', async () => {
+    const res = await request(app)
+      .put('/api/canchas/99999')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ nombre: 'No Existe', tipo_suelo: 'Losa', precio_hora: 50 });
+    
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-I-27: Debe retornar 404 si se intenta desactivar una cancha inexistente (404)', async () => {
+    const res = await request(app)
+      .delete('/api/canchas/99999')
+      .set('Authorization', `Bearer ${tokenAdmin}`);
+    
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-I-28: Forzar catch en CanchaController.crear con datos corruptos (400)', async () => {
+    const res = await request(app)
+      .post('/api/canchas')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ nombre: null, precio_hora: 'invalido' });
+    
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-I-29: Forzar catch en CanchaController.actualizar con datos corruptos (400)', async () => {
+    const res = await request(app)
+      .put('/api/canchas/1')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ precio_hora: {} });
+    
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-I-30: Desactivar cancha no existente debe retornar error 404 (404)', async () => {
+    const res = await request(app)
+      .delete('/api/canchas/99999')
+      .set('Authorization', `Bearer ${tokenAdmin}`);
+    
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-I-31: Probar endpoint de salud /api/health (200)', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('OK');
+  });
+
+  test('TC-I-32: Probar endpoint raíz / (servir frontend SPA) (200)', async () => {
+    const res = await request(app).get('/');
+    expect(res.status).toBe(200);
+  });
+
+  test('TC-I-33: Probar ruta de API no existente /api/ruta-inexistente (404)', async () => {
+    const res = await request(app).get('/api/ruta-inexistente');
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-I-34: optionalAuthMiddleware con token inválido no bloquea la consulta (200)', async () => {
+    const res = await request(app)
+      .get('/api/canchas')
+      .set('Authorization', 'Bearer token_invalido_expirado');
+    expect(res.status).toBe(200);
+  });
+
+  test('TC-I-35: Intentar cancelar una reserva inexistente debe retornar error (400/404)', async () => {
+    const res = await request(app)
+      .put('/api/reservas/99999/cancelar')
+      .set('Authorization', `Bearer ${tokenCliente}`);
+    expect([400, 404]).toContain(res.status);
+  });
 });

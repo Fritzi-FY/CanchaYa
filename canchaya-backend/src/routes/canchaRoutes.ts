@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { CanchaController } from '../controllers/CanchaController';
-import { authMiddleware, roleMiddleware } from '../middlewares/authMiddleware';
+import { authMiddleware, optionalAuthMiddleware, roleMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// Endpoint público para obtener canchas (filtrado por activo para clientes, completo para admins)
-router.get('/', authMiddleware, CanchaController.listar);
+// Endpoint público para obtener canchas (filtrado por activo para clientes/visitantes, completo para admins)
+router.get('/', optionalAuthMiddleware, CanchaController.listar);
 
 // Endpoints administrativos protegidos
 router.post('/', authMiddleware, roleMiddleware('ADMIN'), CanchaController.crear);
