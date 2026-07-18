@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+canchaya-backend/node_modules/
+
+# Archivos compilados
+dist/
+canchaya-backend/dist/
+*.js.map
+
+# Variables de entorno y llaves secretas
+.env
+canchaya-backend/.env
+
+# Reportes de pruebas y coberturas
+coverage/
+canchaya-backend/coverage/
+playwright-report/
+test-results/
+
+# Archivos de sistema / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -15,7 +15,11 @@
     "useDefineForClassFields": false //ASEGÚRATE DE QUE ESTÉ EN FALSE!
   },
   "include": [
-    "src/**/*",
-    "tests/**/*"
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests"
   ]
 }

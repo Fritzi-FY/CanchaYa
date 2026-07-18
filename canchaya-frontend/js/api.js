@@ -1,4 +1,10 @@
-const API_URL = 'http://localhost:3000/api';
+// Determinación dinámica de la URL de la API según el entorno
+const API_URL = window.CUSTOM_API_URL || 
+  (window.location.origin && window.location.origin !== 'null' && !window.location.href.startsWith('file://')
+    ? (window.location.origin.includes(':3000') || window.location.origin.includes(':8080')
+        ? `${window.location.origin}/api`
+        : `${window.location.protocol}//${window.location.hostname}:3000/api`)
+    : 'http://localhost:3000/api');
 
 // Helper centralizado para hacer peticiones HTTP fácilmente
 async function apiFetch(endpoint, options = {}) {
@@ -24,7 +30,7 @@ async function apiFetch(endpoint, options = {}) {
     
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error en la petición: ${response.status}`);
+        throw new Error(errorData.message || errorData.error || `Error en la petición: ${response.status}`);
     }
 
     return response.json();

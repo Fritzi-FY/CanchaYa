@@ -1,0 +1,22 @@
+{
+  "name": "canchaya-e2e",
+  "version": "1.0.0",
+  "description": "Pruebas de extremo a extremo (E2E) con Playwright para CanchaYA",
+  "scripts": {
+    "db:init": "cd canchaya-backend && npx ts-node src/create-db-if-not-exists.ts",
+    "db:seed:test": "cd canchaya-backend && cross-env NODE_ENV=test_e2e npx ts-node src/seed-test-db.ts",
+    "test:e2e": "npm run db:init && npm run db:seed:test && cross-env NODE_ENV=test_e2e playwright test",
+    "test:e2e:ui": "npm run db:init && npm run db:seed:test && cross-env NODE_ENV=test_e2e playwright test --ui",
+    "build": "cd canchaya-backend && npm run build",
+    "start": "cd canchaya-backend && npm start",
+    "test": "cd canchaya-backend && npm test",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "cross-env": "^7.0.3",
+    "http-server": "^14.1.1",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,12 +1,18 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 
+const initialNodeEnv = process.env.NODE_ENV;
 dotenv.config();
+if (initialNodeEnv) {
+  process.env.NODE_ENV = initialNodeEnv;
+}
 
-const isTest = process.env.NODE_ENV === 'test';
+const isTest = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'test_e2e';
+const dbName = isTest ? 'canchaya_test_db' : (process.env.DB_NAME || 'canchaya_db');
+console.log(`🔌 Conectando a la base de datos: ${dbName} (NODE_ENV=${process.env.NODE_ENV})`);
 
 export const sequelize = new Sequelize(
-    isTest ? 'canchaya_test_db' : (process.env.DB_NAME || 'canchaya_db'),
+    dbName,
     process.env.DB_USER || 'root',
     process.env.DB_PASSWORD || '',
     {

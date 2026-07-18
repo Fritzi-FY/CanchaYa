@@ -85,11 +85,11 @@ VALUES
 ON DUPLICATE KEY UPDATE `nombre`=VALUES(`nombre`), `tipo_suelo`=VALUES(`tipo_suelo`), `precio_hora`=VALUES(`precio_hora`);
 
 -- Insertar Usuario Administrador por defecto si no existe (contraseña encriptada para '123456')
--- Hash generado usando bcrypt (10 rounds) para '123456': $2a$10$QpWqQjWlU6tWixvWvT6w3OSq2OqgU1GeqyT.g81w0f/6Fh838d172
+-- Hash generado usando bcrypt (10 rounds) para '123456': $2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G
 INSERT INTO `usuarios` (`id`, `nombre`, `email`, `password`, `rol`) 
 VALUES 
-  (1, 'Administrador CanchaYA', 'admin@canchaya.com', '$2a$10$QpWqQjWlU6tWixvWvT6w3OSq2OqgU1GeqyT.g81w0f/6Fh838d172', 'ADMIN')
-ON DUPLICATE KEY UPDATE `email`=VALUES(`email`);
+  (1, 'Administrador CanchaYA', 'admin@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'ADMIN')
+ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `password`=VALUES(`password`), `rol`=VALUES(`rol`);
 
 -- Limpiar horarios anteriores para evitar duplicados
 DELETE FROM `horarios`;

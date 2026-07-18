@@ -1,5 +1,6 @@
 import express from 'express';
-import cors from 'cors'; // <-- 1. IMPORTACIÓN NUEVA
+import cors from 'cors';
+import path from 'path';
 import authRoutes from './routes/authRoutes';
 import reservaRoutes from './routes/reservaRoutes';
 import canchaRoutes from './routes/canchaRoutes';
@@ -7,13 +8,34 @@ import { sequelize } from './config/database';
 
 const app = express();
 
-app.use(cors()); // <-- 2. CONFIGURACIÓN NUEVA (Permite conexiones desde el Frontend)
+// Configuración de CORS dinámico
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Inyección de Rutas
+// Servir archivos estáticos del Frontend en producción o desarrollo unificado
+const frontendPath = path.join(__dirname, '../../canchaya-frontend');
+app.use(express.static(frontendPath));
+
+// Inyección de Rutas de la API REST
 app.use('/api/auth', authRoutes);
 app.use('/api/reservas', reservaRoutes);
 app.use('/api/canchas', canchaRoutes);
+
+// Ruta fallback para SPA Frontend en caso de navegación directa
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 

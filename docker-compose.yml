@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # SERVICIO 1: Base de Datos MySQL 8.0
+  # ==========================================
+  db:
+    image: mysql:8.0
+    container_name: canchaya_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: canchaya_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./canchaya-backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # SERVICIO 2: API Backend CanchaYA + Frontend
+  # ==========================================
+  backend:
+    build:
+      context: ./canchaya-backend
+      dockerfile: Dockerfile
+    container_name: canchaya_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: canchaya_db
+      DB_PORT: 3306
+      JWT_SECRET: ClaveSecretaSuperSeguraParaAyacucho2026Produccion
+      CORS_ORIGIN: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./canchaya-frontend:/canchaya-frontend:ro
+
+volumes:
+  mysql_data:
