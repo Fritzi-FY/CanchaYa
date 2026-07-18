@@ -10,7 +10,7 @@
 
 - [x] Task 1.1: Verify `railway.json` configuration file at repository root with build and start commands.
 - [x] Task 1.2: Ensure server `index.js` dynamically binds to `process.env.PORT` and listens on `0.0.0.0`.
-- [x] Task 1.3: Verify dynamic fallback for MySQL connection parameters in `db.js` (`MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`).
+- [x] Task 1.3: Verify dynamic fallback for MySQL connection parameters in `src/config/database.ts` (`MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`).
 
 ## Phase 2: Railway Project Setup & Database Provisioning
 
