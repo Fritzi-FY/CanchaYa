@@ -56,8 +56,38 @@ app.get('*', (req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'test') {
-  sequelize.sync({ force: false }).then(() => {
+  sequelize.sync({ force: false }).then(async () => {
     console.log('📦 Conexión a MySQL establecida correctamente.');
+    
+    // Auto-poblar canchas y usuario admin si la base de datos recién se inicializa
+    try {
+      const { Cancha } = await import('./models/Cancha');
+      const { Usuario } = await import('./models/Usuario');
+      const bcrypt = await import('bcryptjs');
+
+      const courtCount = await Cancha.count();
+      if (courtCount === 0) {
+        console.log('🌱 Inicializando datos semilla en la base de datos...');
+        await Cancha.bulkCreate([
+          { nombre: 'Camp Nou Ayacucho', tipo_suelo: 'GRASS', precio_hora: 60.00, deporte: 'FÚTBOL', activo: true },
+          { nombre: 'La Bombonera Losa', tipo_suelo: 'LOSA', precio_hora: 40.00, deporte: 'FÚTBOL', activo: true },
+          { nombre: 'Maracaná Sintético', tipo_suelo: 'SINTÉTICO', precio_hora: 50.00, deporte: 'FÚTBOL', activo: true },
+          { nombre: 'Wembley Vóley', tipo_suelo: 'LOSA', precio_hora: 35.00, deporte: 'VÓLEY', activo: true },
+          { nombre: 'Santiago Bernabéu', tipo_suelo: 'GRASS', precio_hora: 70.00, deporte: 'FÚTBOL', activo: true }
+        ]);
+
+        const adminHash = await bcrypt.hash('123456', 10);
+        const passHash = await bcrypt.hash('password123', 10);
+        await Usuario.bulkCreate([
+          { nombre: 'Administrador CanchaYA', email: 'admin@canchaya.com', password: adminHash, rol: 'ADMIN' },
+          { nombre: 'Juan Cliente', email: 'juan@gmail.com', password: passHash, rol: 'CLIENTE' }
+        ], { ignoreDuplicates: true });
+        console.log('✅ Datos semilla cargados con éxito.');
+      }
+    } catch (seedErr) {
+      console.error('⚠️ Error al verificar/cargar datos semilla:', seedErr);
+    }
+
     app.listen(PORT, () => {
       console.log(`🚀 Servidor CanchaYA corriendo en http://localhost:${PORT}`);
     });
