@@ -97,6 +97,7 @@ As a security auditor, I want all sensitive administrative routes (`POST /api/ca
 - **FR-006**: Public catalog `GET /api/canchas` MUST allow unauthenticated guest requests to browse active courts.
 - **FR-007**: All CORS requests MUST be configured to allow origin credentials from the deployed frontend domain or all origins (`*`) in production API mode.
 - **FR-008**: The backend MUST bundle and serve the frontend static single-page application (SPA) assets from a bundled `public/` directory or relative frontend path so that accessing the root URL `GET /` presents the full visual UI.
+- **FR-009**: Operating hours validation MUST accurately compute the day of the week in local date format without UTC timezone drift, and fallback to system operational window (08:00 to 22:00) when explicit court schedule records are absent.
 
 ---
 

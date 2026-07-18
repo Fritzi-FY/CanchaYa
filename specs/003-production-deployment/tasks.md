@@ -12,6 +12,7 @@
 - [x] Task 1.2: Ensure server `index.js` dynamically binds to `process.env.PORT` and listens on `0.0.0.0`.
 - [x] Task 1.3: Verify dynamic fallback for MySQL connection parameters in `src/config/database.ts` (`MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`).
 - [x] Task 1.4: Bundle frontend SPA static assets into `canchaya-backend/public` and update `app.ts` static path resolution to support production cloud deployment.
+- [x] Task 1.5: Fix timezone drift in `ReservaService.verificarDisponibilidadHoraria` and add 08:00-22:00 fallback when explicit schedule rows are missing.
 
 ## Phase 2: Railway Project Setup & Database Provisioning
 

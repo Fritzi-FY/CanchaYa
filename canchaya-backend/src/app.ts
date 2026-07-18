@@ -84,13 +84,22 @@ if (process.env.NODE_ENV !== 'test') {
           { nombre: 'Santiago Bernabéu', tipo_suelo: 'GRASS', precio_hora: 70.00, deporte: 'FÚTBOL', activo: true }
         ]);
 
+        const { Horario } = await import('./models/Horario');
+        const horariosDefault: Array<{ cancha_id: number; dia_semana: number; hora_inicio: string; hora_fin: string }> = [];
+        for (let canchaId = 1; canchaId <= 5; canchaId++) {
+          for (let dia = 0; dia <= 6; dia++) {
+            horariosDefault.push({ cancha_id: canchaId, dia_semana: dia, hora_inicio: '08:00:00', hora_fin: '22:00:00' });
+          }
+        }
+        await Horario.bulkCreate(horariosDefault, { ignoreDuplicates: true });
+
         const adminHash = await bcrypt.hash('123456', 10);
         const passHash = await bcrypt.hash('password123', 10);
         await Usuario.bulkCreate([
           { nombre: 'Administrador CanchaYA', email: 'admin@canchaya.com', password: adminHash, rol: 'ADMIN' },
           { nombre: 'Juan Cliente', email: 'juan@gmail.com', password: passHash, rol: 'CLIENTE' }
         ], { ignoreDuplicates: true });
-        console.log('✅ Datos semilla cargados con éxito.');
+        console.log('✅ Datos semilla y horarios operativos cargados con éxito.');
       }
     } catch (seedErr) {
       console.error('⚠️ Error al verificar/cargar datos semilla:', seedErr);

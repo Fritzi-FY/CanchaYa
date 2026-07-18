@@ -55,9 +55,28 @@ export class ReservaService {
     horaInicio: string,
     horaFin: string
   ): Promise<boolean> {
-    const fechaObj = new Date(fecha);
-    const diaSemana = fechaObj.getDay();
+    // 1. Parsear fecha sin desfasaje por zona horaria UTC
+    const partes = fecha.split('-');
+    let diaSemana: number;
+    if (partes.length === 3) {
+      const [year, month, day] = partes.map(Number);
+      diaSemana = new Date(year, month - 1, day).getDay();
+    } else {
+      diaSemana = new Date(fecha).getDay();
+    }
 
+    // 2. Verificar si existen horarios configurados específicamente para esta cancha
+    const totalHorariosCancha = await Horario.count({ where: { cancha_id: canchaId } });
+
+    if (totalHorariosCancha === 0) {
+      // Si la cancha no tiene reglas de horario personalizadas en la BD,
+      // se aplica la ventana operativa estándar del sistema (08:00 a 22:00 todos los días)
+      const inicioOk = horaInicio >= '08:00';
+      const finOk = horaFin <= '22:00';
+      return inicioOk && finOk;
+    }
+
+    // 3. Si existen horarios en la BD, verificar contra la regla específica del día
     const horarioEstablecido = await Horario.findOne({
       where: {
         cancha_id: canchaId,
@@ -66,6 +85,7 @@ export class ReservaService {
         hora_fin: { [Op.gte]: horaFin }
       }
     });
+
     return !!horarioEstablecido;
   }
 
