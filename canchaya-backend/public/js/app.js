@@ -362,7 +362,7 @@ function App() {
         HORAS_OPERATIVAS.forEach(h => conteoHoras[h] = 0);
 
         reportData.reservas.forEach(r => {
-            const nombreCancha = r.Cancha?.nombre || `Cancha #${r.cancha_id}`;
+            const nombreCancha = (r.Cancha && r.Cancha.nombre) ? r.Cancha.nombre : `Cancha #${r.cancha_id}`;
             if (r.estado === "APROBADO") {
                 ingresosCanchas[nombreCancha] = (ingresosCanchas[nombreCancha] || 0) + parseFloat(r.total_pago);
                 const hInicio = r.hora_inicio.substring(0, 5);
@@ -409,7 +409,7 @@ function App() {
 
     const canchasFiltradas = canchas.filter(c => {
         if (deporteFiltro === "TODOS") return true;
-        return c.deporte?.toUpperCase() === deporteFiltro;
+        return (c.deporte || "").toUpperCase() === deporteFiltro;
     });
 
     const getIconoDeporte = (deporte) => {
@@ -724,7 +724,7 @@ function App() {
                                 >
                                     {canchas.map(c => (
                                         <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                                            {getIconoDeporte(c.deporte)} {cancha.nombre || c.nombre} (S/. {c.precio_hora}/h)
+                                            {getIconoDeporte(c.deporte)} {c.nombre} (S/. {c.precio_hora}/h)
                                         </option>
                                     ))}
                                 </select>
@@ -848,19 +848,19 @@ function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="glass-card p-5 rounded-2xl">
                                 <span className="text-xs text-slate-400 font-bold block uppercase">Ingresos Totales</span>
-                                <span className="text-2xl font-black text-emerald-400">S/. {reportData.resumen?.ingresosTotales || 0}.00</span>
+                                <span className="text-2xl font-black text-emerald-400">S/. {(reportData.resumen && reportData.resumen.ingresosTotales) || 0}.00</span>
                             </div>
                             <div className="glass-card p-5 rounded-2xl">
                                 <span className="text-xs text-slate-400 font-bold block uppercase">Pérdidas (Reembolsos)</span>
-                                <span className="text-2xl font-black text-rose-400">S/. {reportData.resumen?.perdidasReembolsos || 0}.00</span>
+                                <span className="text-2xl font-black text-rose-400">S/. {(reportData.resumen && reportData.resumen.perdidasReembolsos) || 0}.00</span>
                             </div>
                             <div className="glass-card p-5 rounded-2xl">
                                 <span className="text-xs text-slate-400 font-bold block uppercase">Penalidades Cobradas</span>
-                                <span className="text-2xl font-black text-cyan-400">S/. {reportData.resumen?.penalidadesCobradas || 0}.00</span>
+                                <span className="text-2xl font-black text-cyan-400">S/. {(reportData.resumen && reportData.resumen.penalidadesCobradas) || 0}.00</span>
                             </div>
                             <div className="glass-card p-5 rounded-2xl">
                                 <span className="text-xs text-slate-400 font-bold block uppercase">Total Reservas</span>
-                                <span className="text-2xl font-black text-white">{reportData.resumen?.conteoReservas || 0}</span>
+                                <span className="text-2xl font-black text-white">{(reportData.resumen && reportData.resumen.conteoReservas) || 0}</span>
                             </div>
                         </div>
 
@@ -951,7 +951,7 @@ function App() {
                                             <span className="text-slate-500 font-mono text-[10px]">{new Date(log.fecha).toLocaleString()}</span>
                                         </div>
                                         <p className="text-slate-300 font-medium">{log.detalles}</p>
-                                        <p className="text-[10px] text-slate-400">Por: {log.Usuario?.nombre || "Sistema"} ({log.Usuario?.email || "N/A"})</p>
+                                        <p className="text-[10px] text-slate-400">Por: {(log.Usuario && log.Usuario.nombre) ? log.Usuario.nombre : "Sistema"} ({(log.Usuario && log.Usuario.email) ? log.Usuario.email : "N/A"})</p>
                                     </div>
                                 ))}
                             </div>
