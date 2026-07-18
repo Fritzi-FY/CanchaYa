@@ -16,8 +16,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+import fs from 'fs';
+
 // Servir archivos estáticos del Frontend en producción o desarrollo unificado
-const frontendPath = path.join(__dirname, '../../canchaya-frontend');
+const possibleFrontendPaths = [
+  path.join(__dirname, '../public'),
+  path.join(process.cwd(), 'public'),
+  path.join(__dirname, '../../canchaya-frontend'),
+  path.join(process.cwd(), '../canchaya-frontend')
+];
+const frontendPath = possibleFrontendPaths.find(p => fs.existsSync(path.join(p, 'index.html'))) || possibleFrontendPaths[0];
 app.use(express.static(frontendPath));
 
 // Inyección de Rutas de la API REST

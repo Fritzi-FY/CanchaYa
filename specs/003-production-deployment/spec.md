@@ -96,6 +96,7 @@ As a security auditor, I want all sensitive administrative routes (`POST /api/ca
 - **FR-005**: Public URL root `GET /` MUST return HTTP 200 OK with API status.
 - **FR-006**: Public catalog `GET /api/canchas` MUST allow unauthenticated guest requests to browse active courts.
 - **FR-007**: All CORS requests MUST be configured to allow origin credentials from the deployed frontend domain or all origins (`*`) in production API mode.
+- **FR-008**: The backend MUST bundle and serve the frontend static single-page application (SPA) assets from a bundled `public/` directory or relative frontend path so that accessing the root URL `GET /` presents the full visual UI.
 
 ---
 

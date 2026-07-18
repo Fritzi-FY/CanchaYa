@@ -30,6 +30,7 @@ RUN npm ci --only=production
 
 # Copiar archivos compilados desde la etapa de construcción
 COPY --from=builder /app/dist ./dist
+COPY public ./public
 COPY schema.sql ./
 COPY seed.js ./
 
