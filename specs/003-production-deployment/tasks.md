@@ -14,25 +14,25 @@
 
 ## Phase 2: Railway Project Setup & Database Provisioning
 
-- [ ] Task 2.1: Create a new project in [Railway.app](https://railway.app).
-- [ ] Task 2.2: Add a **Provision MySQL** service inside the Railway project.
-- [ ] Task 2.3: Import schema and seed data into Railway MySQL using `canchaya-backend/schema.sql`.
+- [x] Task 2.1: Create a new project in [Railway.app](https://railway.app).
+- [x] Task 2.2: Add a **Provision MySQL** service inside the Railway project.
+- [x] Task 2.3: Import schema and seed data into Railway MySQL using `canchaya-backend/schema.sql` / auto-seed.
 
 ## Phase 3: Web Service Deployment & Environment Variables
 
-- [ ] Task 3.1: Connect GitHub repository `CanchaYa` to the Railway project.
-- [ ] Task 3.2: Configure environment variables in Railway:
+- [x] Task 3.1: Connect GitHub repository `CanchaYa` to the Railway project.
+- [x] Task 3.2: Configure environment variables in Railway:
   - `PORT`: Auto-assigned by Railway
   - `DB_HOST`: `${{MySQL.MYSQLHOST}}`
   - `DB_PORT`: `${{MySQL.MYSQLPORT}}`
   - `DB_USER`: `${{MySQL.MYSQLUSER}}`
   - `DB_PASSWORD`: `${{MySQL.MYSQLPASSWORD}}`
   - `DB_NAME`: `${{MySQL.MYSQLDATABASE}}`
-  - `JWT_SECRET`: `supersecret_canchaya_prod_key_2026`
-- [ ] Task 3.3: Trigger Railway build and deploy workflow.
+  - `JWT_SECRET`: `ClaveSecretaSuperSeguraParaAyacucho2026Produccion`
+- [x] Task 3.3: Trigger Railway build and deploy workflow.
 
 ## Phase 4: Public Verification & Health Probes
 
-- [ ] Task 4.1: Access the generated Railway public domain `https://<app-name>.up.railway.app/` and verify HTTP 200 OK API status response.
-- [ ] Task 4.2: Verify unauthenticated guest court listing at `GET /api/canchas`.
-- [ ] Task 4.3: Test client login and administrative booking workflows against the live production URL.
+- [x] Task 4.1: Access the generated Railway public domain `https://canchaya-production-f03a.up.railway.app/` and verify HTTP 200 OK API status response.
+- [x] Task 4.2: Verify unauthenticated guest court listing at `GET /api/canchas`.
+- [x] Task 4.3: Test client login and administrative booking workflows against the live production URL.
