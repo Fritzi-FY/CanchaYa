@@ -3,8 +3,6 @@
 -- ==========================================
 -- 1. BASE DE DATOS DE PRUEBAS (canchaya_test_db)
 -- ==========================================
--- Para las pruebas automatizadas (npm run test), solo es necesario que exista la base de datos vacía,
--- ya que Sequelize se encarga de crear las tablas y sembrar los datos en cada ejecución (force: true).
 CREATE DATABASE IF NOT EXISTS `canchaya_test_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -74,42 +72,74 @@ CREATE TABLE IF NOT EXISTS `auditorias` (
 ) ENGINE=InnoDB;
 
 -- ==========================================
--- 3. INSERCIÓN DE DATOS INICIALES (Semillas/Seeds) en canchaya_db
+-- 3. INSERCIÓN DE DATOS INICIALES Y SEMILLAS
 -- ==========================================
 
--- Insertar Canchas por defecto si no existen
-INSERT INTO `canchas` (`id`, `nombre`, `tipo_suelo`, `precio_hora`) 
-VALUES 
-  (1, 'Camp Nou Ayacucho', 'GRASS', 60.00),
-  (2, 'La Bombonera Losa', 'LOSA', 40.00)
-ON DUPLICATE KEY UPDATE `nombre`=VALUES(`nombre`), `tipo_suelo`=VALUES(`tipo_suelo`), `precio_hora`=VALUES(`precio_hora`);
-
--- Insertar Usuario Administrador por defecto si no existe (contraseña encriptada para '123456')
--- Hash generado usando bcrypt (10 rounds) para '123456': $2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G
+-- Insertar Usuarios por defecto (Contraseña encriptada '123456' o 'password123')
+-- Hash bcrypt para '123456': $2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G
 INSERT INTO `usuarios` (`id`, `nombre`, `email`, `password`, `rol`) 
 VALUES 
-  (1, 'Administrador CanchaYA', 'admin@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'ADMIN')
-ON DUPLICATE KEY UPDATE `email`=VALUES(`email`), `password`=VALUES(`password`), `rol`=VALUES(`rol`);
+  (1, 'Administrador CanchaYA', 'admin@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'ADMIN'),
+  (2, 'Lionel Messi', 'lionel.messi@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'CLIENTE'),
+  (3, 'Cristiano Ronaldo', 'cristiano.ronaldo@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'CLIENTE'),
+  (4, 'Rafael Nadal', 'rafael.nadal@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'CLIENTE'),
+  (5, 'LeBron James', 'lebron.james@canchaya.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'CLIENTE'),
+  (6, 'Juan Pérez', 'juan@gmail.com', '$2a$10$w0YEA1Sq8mRWe7ZPzMs/uu5EI3hyGN20Sj26rWKWXaWRB6DdIth/G', 'CLIENTE')
+ON DUPLICATE KEY UPDATE 
+  `nombre`=VALUES(`nombre`), `email`=VALUES(`email`), `password`=VALUES(`password`), `rol`=VALUES(`rol`);
 
--- Limpiar horarios anteriores para evitar duplicados
+-- Insertar Canchas Famosas Internacionales
+INSERT INTO `canchas` (`id`, `nombre`, `tipo_suelo`, `precio_hora`, `deporte`, `activo`) 
+VALUES 
+  (1, 'Santiago Bernabéu Grass', 'GRASS', 80.00, 'FÚTBOL', 1),
+  (2, 'Camp Nou Ayacucho', 'GRASS', 60.00, 'FÚTBOL', 1),
+  (3, 'La Bombonera Losa', 'LOSA', 40.00, 'FÚTBOL', 1),
+  (4, 'Wimbledon Centre Court', 'GRASS', 75.00, 'TENIS', 1),
+  (5, 'Roland Garros Philippe-Chatrier', 'LOSA', 70.00, 'TENIS', 1),
+  (6, 'Madison Square Garden Court', 'LOSA', 85.00, 'BÁSQUETBOL', 1),
+  (7, 'Staples Center Arena', 'LOSA', 90.00, 'BÁSQUETBOL', 1),
+  (8, 'Maracaná Sintético', 'GRASS', 65.00, 'FÚTBOL', 1)
+ON DUPLICATE KEY UPDATE 
+  `nombre`=VALUES(`nombre`), `tipo_suelo`=VALUES(`tipo_suelo`), `precio_hora`=VALUES(`precio_hora`), `deporte`=VALUES(`deporte`), `activo`=VALUES(`activo`);
+
+-- Limpiar e Insertar Horarios Operativos (08:00 a 22:00 de Lunes a Domingo) para todas las canchas
 DELETE FROM `horarios`;
-
--- Insertar Horarios operativos (08:00 a 22:00 para todos los días 0-6) para ambas canchas
 INSERT INTO `horarios` (`cancha_id`, `dia_semana`, `hora_inicio`, `hora_fin`) 
 VALUES
-  -- Cancha 1: Camp Nou Ayacucho
-  (1, 0, '08:00:00', '22:00:00'),
-  (1, 1, '08:00:00', '22:00:00'),
-  (1, 2, '08:00:00', '22:00:00'),
-  (1, 3, '08:00:00', '22:00:00'),
-  (1, 4, '08:00:00', '22:00:00'),
-  (1, 5, '08:00:00', '22:00:00'),
-  (1, 6, '08:00:00', '22:00:00'),
-  -- Cancha 2: La Bombonera Losa
-  (2, 0, '08:00:00', '22:00:00'),
-  (2, 1, '08:00:00', '22:00:00'),
-  (2, 2, '08:00:00', '22:00:00'),
-  (2, 3, '08:00:00', '22:00:00'),
-  (2, 4, '08:00:00', '22:00:00'),
-  (2, 5, '08:00:00', '22:00:00'),
-  (2, 6, '08:00:00', '22:00:00');
+  -- Santiago Bernabéu
+  (1,0,'08:00:00','22:00:00'),(1,1,'08:00:00','22:00:00'),(1,2,'08:00:00','22:00:00'),(1,3,'08:00:00','22:00:00'),(1,4,'08:00:00','22:00:00'),(1,5,'08:00:00','22:00:00'),(1,6,'08:00:00','22:00:00'),
+  -- Camp Nou Ayacucho
+  (2,0,'08:00:00','22:00:00'),(2,1,'08:00:00','22:00:00'),(2,2,'08:00:00','22:00:00'),(2,3,'08:00:00','22:00:00'),(2,4,'08:00:00','22:00:00'),(2,5,'08:00:00','22:00:00'),(2,6,'08:00:00','22:00:00'),
+  -- La Bombonera Losa
+  (3,0,'08:00:00','22:00:00'),(3,1,'08:00:00','22:00:00'),(3,2,'08:00:00','22:00:00'),(3,3,'08:00:00','22:00:00'),(3,4,'08:00:00','22:00:00'),(3,5,'08:00:00','22:00:00'),(3,6,'08:00:00','22:00:00'),
+  -- Wimbledon Centre Court
+  (4,0,'08:00:00','22:00:00'),(4,1,'08:00:00','22:00:00'),(4,2,'08:00:00','22:00:00'),(4,3,'08:00:00','22:00:00'),(4,4,'08:00:00','22:00:00'),(4,5,'08:00:00','22:00:00'),(4,6,'08:00:00','22:00:00'),
+  -- Roland Garros
+  (5,0,'08:00:00','22:00:00'),(5,1,'08:00:00','22:00:00'),(5,2,'08:00:00','22:00:00'),(5,3,'08:00:00','22:00:00'),(5,4,'08:00:00','22:00:00'),(5,5,'08:00:00','22:00:00'),(5,6,'08:00:00','22:00:00'),
+  -- Madison Square Garden
+  (6,0,'08:00:00','22:00:00'),(6,1,'08:00:00','22:00:00'),(6,2,'08:00:00','22:00:00'),(6,3,'08:00:00','22:00:00'),(6,4,'08:00:00','22:00:00'),(6,5,'08:00:00','22:00:00'),(6,6,'08:00:00','22:00:00'),
+  -- Staples Center
+  (7,0,'08:00:00','22:00:00'),(7,1,'08:00:00','22:00:00'),(7,2,'08:00:00','22:00:00'),(7,3,'08:00:00','22:00:00'),(7,4,'08:00:00','22:00:00'),(7,5,'08:00:00','22:00:00'),(7,6,'08:00:00','22:00:00'),
+  -- Maracaná Sintético
+  (8,0,'08:00:00','22:00:00'),(8,1,'08:00:00','22:00:00'),(8,2,'08:00:00','22:00:00'),(8,3,'08:00:00','22:00:00'),(8,4,'08:00:00','22:00:00'),(8,5,'08:00:00','22:00:00'),(8,6,'08:00:00','22:00:00');
+
+-- Insertar Reservas de Prueba Realizadas (Aprobadas y Canceladas con Métricas Financieras)
+INSERT INTO `reservas` (`id`, `usuario_id`, `cancha_id`, `fecha_reserva`, `hora_inicio`, `hora_fin`, `total_pago`, `reembolso`, `penalidad`, `estado`)
+VALUES
+  (1, 2, 1, '2026-08-10', '16:00:00', '18:00:00', 160.00, 0.00, 0.00, 'APROBADO'),
+  (2, 3, 2, '2026-08-11', '18:00:00', '20:00:00', 120.00, 0.00, 0.00, 'APROBADO'),
+  (3, 4, 4, '2026-08-12', '10:00:00', '12:00:00', 150.00, 0.00, 0.00, 'APROBADO'),
+  (4, 5, 6, '2026-08-13', '19:00:00', '21:00:00', 170.00, 0.00, 0.00, 'APROBADO'),
+  (5, 6, 3, '2026-08-14', '14:00:00', '15:00:00', 40.00, 40.00, 0.00, 'CANCELADO'),
+  (6, 2, 8, '2026-08-15', '17:00:00', '19:00:00', 130.00, 65.00, 65.00, 'CANCELADO')
+ON DUPLICATE KEY UPDATE 
+  `total_pago`=VALUES(`total_pago`), `reembolso`=VALUES(`reembolso`), `penalidad`=VALUES(`penalidad`), `estado`=VALUES(`estado`);
+
+-- Insertar Registros de Auditoría de Ejemplo
+INSERT INTO `auditorias` (`id`, `usuario_id`, `accion`, `detalles`)
+VALUES
+  (1, 1, 'CREAR_CANCHA', 'Se registró la cancha Santiago Bernabéu Grass con precio S/ 80.00'),
+  (2, 1, 'CREAR_CANCHA', 'Se registró la cancha Wimbledon Centre Court con precio S/ 75.00'),
+  (3, 2, 'CREAR_RESERVA', 'Reserva exitosa #1 para Santiago Bernabéu Grass'),
+  (4, 6, 'CANCELAR_RESERVA', 'Reserva #5 cancelada con reembolso de S/ 40.00')
+ON DUPLICATE KEY UPDATE `accion`=VALUES(`accion`), `detalles`=VALUES(`detalles`);
