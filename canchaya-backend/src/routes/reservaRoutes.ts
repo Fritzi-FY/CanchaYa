@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { ReservaController } from '../controllers/ReservaController';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { authMiddleware, roleMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// Asegúrate de que use el middleware de autenticación y el método correcto
 router.post('/', authMiddleware, ReservaController.crear);
 router.get('/me', authMiddleware, ReservaController.listarMisReservas);
+router.get('/reportes', authMiddleware, roleMiddleware('ADMIN'), ReservaController.obtenerReportes);
 router.get('/', authMiddleware, ReservaController.listarTodas);
+router.put('/:id/cancelar', authMiddleware, ReservaController.cancelar);
 
 export default router;

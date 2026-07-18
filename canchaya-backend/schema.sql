@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS `canchas` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `nombre` VARCHAR(100) NOT NULL,
   `tipo_suelo` VARCHAR(50) NOT NULL,
-  `precio_hora` DECIMAL(10, 2) NOT NULL
+  `precio_hora` DECIMAL(10, 2) NOT NULL,
+  `deporte` VARCHAR(50) NOT NULL DEFAULT 'FÚTBOL',
+  `activo` TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB;
 
 -- Tabla de Horarios Operativos
@@ -56,7 +58,19 @@ CREATE TABLE IF NOT EXISTS `reservas` (
   CONSTRAINT `fk_reservas_usuario` FOREIGN KEY (`usuario_id`) 
     REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_reservas_cancha` FOREIGN KEY (`cancha_id`) 
-    REFERENCES `canchas` (`id`) ON DELETE CASCADE
+    REFERENCES `canchas` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `uq_reserva_cancha_fecha_hora` UNIQUE (`cancha_id`, `fecha_reserva`, `hora_inicio`)
+) ENGINE=InnoDB;
+
+-- Tabla de Auditorías (Log de transacciones)
+CREATE TABLE IF NOT EXISTS `auditorias` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `usuario_id` INT NULL,
+  `accion` VARCHAR(100) NOT NULL,
+  `detalles` TEXT NULL,
+  `fecha` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_auditorias_usuario` FOREIGN KEY (`usuario_id`) 
+    REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ==========================================

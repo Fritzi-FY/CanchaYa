@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
-  usuarioUser?: { id: number; rol: 'CLIENTE' | 'ADMINISTRADOR' };
+  usuarioUser?: { id: number; rol: 'CLIENTE' | 'ADMIN' };
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -13,7 +13,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ClaveSecretaDefault') as { id: number; rol: 'CLIENTE' | 'ADMINISTRADOR' };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ClaveSecretaDefault') as { id: number; rol: 'CLIENTE' | 'ADMIN' };
     req.usuarioUser = decoded;
     next();
   } catch (error) {
@@ -21,7 +21,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   }
 };
 
-export const roleMiddleware = (rolRequerido: 'ADMINISTRADOR') => {
+export const roleMiddleware = (rolRequerido: 'ADMIN') => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.usuarioUser || req.usuarioUser.rol !== rolRequerido) {
       return res.status(403).json({ error: 'Permisos insuficientes para realizar esta acción.' });

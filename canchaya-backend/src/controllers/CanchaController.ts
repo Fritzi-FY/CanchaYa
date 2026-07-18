@@ -113,7 +113,7 @@ export class CanchaController {
         detalles: `Cancha #${id} desactivada (Soft-Delete) para preservar reservas históricas.`
       });
 
-      res.status(200).json({ mensaje: 'Cancha desactivada con éxito', cancha });
+      res.status(200).json({ mensaje: 'Cancha desactivada con éxito', message: 'Cancha desactivada con éxito', cancha });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

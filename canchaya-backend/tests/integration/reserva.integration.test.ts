@@ -145,4 +145,64 @@ describe('Pruebas de Integración de Cobertura Máxima (>95%)', () => {
       .set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.malformado');
     expect(res.status).toBe(401);
   });
+
+  // --- NUEVOS TESTS DE INTEGRACIÓN CREADOS PARA CANCELACIONES Y CRUD CANCHAS ---
+  test('TC-I-18: Debe permitir a un cliente cancelar su propia reserva (200)', async () => {
+    // 1. Primero creamos una reserva activa
+    const resCrear = await request(app)
+      .post('/api/reservas')
+      .set('Authorization', `Bearer ${tokenCliente}`)
+      .send({ cancha_id: canchaInstanciada.id, fecha_reserva: '2026-09-22', hora_inicio: '14:00', hora_fin: '16:00' });
+    
+    expect(resCrear.status).toBe(201);
+    const reservaId = resCrear.body.id;
+
+    // 2. Cancelamos la reserva
+    const resCancel = await request(app)
+      .put(`/api/reservas/${reservaId}/cancelar`)
+      .set('Authorization', `Bearer ${tokenCliente}`);
+    
+    expect(resCancel.status).toBe(200);
+    expect(resCancel.body.estado).toBe('CANCELADO');
+  });
+
+  test('TC-I-19: Un administrador debe poder obtener el reporte de ingresos y pérdidas (200)', async () => {
+    const res = await request(app)
+      .get('/api/reservas/reportes')
+      .set('Authorization', `Bearer ${tokenAdmin}`);
+    
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('resumen');
+    expect(res.body).toHaveProperty('auditorias');
+    expect(res.body.resumen).toHaveProperty('ingresosTotales');
+  });
+
+  test('TC-I-20: Un administrador debe poder crear una cancha nueva (201)', async () => {
+    const res = await request(app)
+      .post('/api/canchas')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ nombre: 'Estadio Secundario', tipo_suelo: 'Losa', precio_hora: 40, deporte: 'BÁSQUET' });
+    
+    expect(res.status).toBe(201);
+    expect(res.body.nombre).toBe('Estadio Secundario');
+    expect(res.body.deporte).toBe('BÁSQUET');
+  });
+
+  test('TC-I-21: Un cliente regular NO debe poder crear una cancha (403)', async () => {
+    const res = await request(app)
+      .post('/api/canchas')
+      .set('Authorization', `Bearer ${tokenCliente}`)
+      .send({ nombre: 'Estadio Intruso', tipo_suelo: 'Grass', precio_hora: 100, deporte: 'FÚTBOL' });
+    
+    expect(res.status).toBe(403);
+  });
+
+  test('TC-I-22: Un administrador debe poder desactivar una cancha (200)', async () => {
+    const res = await request(app)
+      .delete('/api/canchas/1')
+      .set('Authorization', `Bearer ${tokenAdmin}`);
+    
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('desactivada');
+  });
 });

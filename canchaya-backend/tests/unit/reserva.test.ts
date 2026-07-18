@@ -105,7 +105,7 @@ test('TC-U-13: ReservaService.crearReserva - Debe lanzar error si la cancha no e
   test('TC-U-14: ReservaService.crearReserva - Debe lanzar error si está fuera del horario operativo (Líneas 46-55)', async () => {
     const { Cancha } = require('../../src/models/Cancha');
     const { Horario } = require('../../src/models/Horario');
-    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50 } as any);
+    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50, activo: true } as any);
     jest.spyOn(Horario, 'findOne').mockResolvedValue(null);
 
     await expect(
@@ -119,7 +119,7 @@ test('TC-U-13: ReservaService.crearReserva - Debe lanzar error si la cancha no e
     const { Cancha } = require('../../src/models/Cancha');
     const { Horario } = require('../../src/models/Horario');
     const { Reserva } = require('../../src/models/Reserva');
-    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50 } as any);
+    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50, activo: true } as any);
     jest.spyOn(Horario, 'findOne').mockResolvedValue({ hora_inicio: '06:00:00', hora_fin: '22:00:00' } as any);
     jest.spyOn(Reserva, 'findOne').mockResolvedValue({ id: 10 } as any);
 
@@ -134,9 +134,11 @@ test('TC-U-13: ReservaService.crearReserva - Debe lanzar error si la cancha no e
     const { Cancha } = require('../../src/models/Cancha');
     const { Horario } = require('../../src/models/Horario');
     const { Reserva } = require('../../src/models/Reserva');
-    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50 } as any);
+    const { Auditoria } = require('../../src/models/Auditoria');
+    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50, nombre: 'Cancha Test', activo: true } as any);
     jest.spyOn(Horario, 'findOne').mockResolvedValue({ hora_inicio: '06:00:00', hora_fin: '22:00:00' } as any);
     jest.spyOn(Reserva, 'findOne').mockResolvedValue(null);
+    jest.spyOn(Auditoria, 'create').mockResolvedValue({} as any);
     const spyCreate = jest.spyOn(Reserva, 'create').mockResolvedValue({ id: 5, total_pago: 100 } as any);
 
     const resultado = await ReservaService.crearReserva({ cancha_id: 1, fecha_reserva: '2026-12-01', hora_inicio: '10:00', hora_fin: '12:00', usuario_id: 1 });
@@ -171,6 +173,122 @@ test('TC-U-13: ReservaService.crearReserva - Debe lanzar error si la cancha no e
       expect(true).toBe(true);
     }
     
+    jest.restoreAllMocks();
+  });
+
+  test('TC-U-19: ReservaService.cancelarReserva - Reembolso del 100% si faltan más de 24 horas', async () => {
+    const { Reserva } = require('../../src/models/Reserva');
+    const { Auditoria } = require('../../src/models/Auditoria');
+    
+    // Configurar fecha del partido para 2 días en el futuro
+    const fechaPartido = new Date();
+    fechaPartido.setDate(fechaPartido.getDate() + 2);
+    
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fechaStr = `${fechaPartido.getFullYear()}-${pad(fechaPartido.getMonth() + 1)}-${pad(fechaPartido.getDate())}`;
+
+    const mockRes = {
+      id: 10,
+      total_pago: 100,
+      fecha_reserva: fechaStr,
+      hora_inicio: '12:00:00',
+      usuario_id: 1,
+      estado: 'APROBADO',
+      getDataValue(key: string) { return (this as any)[key]; },
+      set(key: string, val: any) { (this as any)[key] = val; },
+      save: jest.fn().mockResolvedValue(true)
+    };
+
+    jest.spyOn(Reserva, 'findByPk').mockResolvedValue(mockRes as any);
+    const spyAudit = jest.spyOn(Auditoria, 'create').mockResolvedValue({} as any);
+
+    const resultado = await ReservaService.cancelarReserva(10, 1, false);
+    expect(resultado.getDataValue('estado')).toBe('CANCELADO');
+    expect(resultado.getDataValue('reembolso')).toBe(100);
+    expect(resultado.getDataValue('penalidad')).toBe(0);
+    expect(spyAudit).toHaveBeenCalled();
+
+    jest.restoreAllMocks();
+  });
+
+  test('TC-U-20: ReservaService.cancelarReserva - Reembolso del 50% y penalidad del 50% si faltan entre 2 y 24 horas', async () => {
+    const { Reserva } = require('../../src/models/Reserva');
+    const { Auditoria } = require('../../src/models/Auditoria');
+    
+    // Configurar fecha del partido para 5 horas en el futuro
+    const fechaPartido = new Date();
+    fechaPartido.setHours(fechaPartido.getHours() + 5);
+    
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fechaStr = `${fechaPartido.getFullYear()}-${pad(fechaPartido.getMonth() + 1)}-${pad(fechaPartido.getDate())}`;
+    const horaStr = `${pad(fechaPartido.getHours())}:00:00`;
+
+    const mockRes = {
+      id: 10,
+      total_pago: 80,
+      fecha_reserva: fechaStr,
+      hora_inicio: horaStr,
+      usuario_id: 1,
+      estado: 'APROBADO',
+      getDataValue(key: string) { return (this as any)[key]; },
+      set(key: string, val: any) { (this as any)[key] = val; },
+      save: jest.fn().mockResolvedValue(true)
+    };
+
+    jest.spyOn(Reserva, 'findByPk').mockResolvedValue(mockRes as any);
+    jest.spyOn(Auditoria, 'create').mockResolvedValue({} as any);
+
+    const resultado = await ReservaService.cancelarReserva(10, 1, false);
+    expect(resultado.getDataValue('estado')).toBe('CANCELADO');
+    expect(resultado.getDataValue('reembolso')).toBe(40);
+    expect(resultado.getDataValue('penalidad')).toBe(40);
+
+    jest.restoreAllMocks();
+  });
+
+  test('TC-U-21: ReservaService.cancelarReserva - Penalidad del 100% y reembolso del 0% si falta menos de 2 horas', async () => {
+    const { Reserva } = require('../../src/models/Reserva');
+    const { Auditoria } = require('../../src/models/Auditoria');
+    
+    // Configurar fecha del partido para 30 minutos en el futuro
+    const fechaPartido = new Date();
+    fechaPartido.setMinutes(fechaPartido.getMinutes() + 30);
+    
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fechaStr = `${fechaPartido.getFullYear()}-${pad(fechaPartido.getMonth() + 1)}-${pad(fechaPartido.getDate())}`;
+    const horaStr = `${pad(fechaPartido.getHours())}:${pad(fechaPartido.getMinutes())}:00`;
+
+    const mockRes = {
+      id: 10,
+      total_pago: 120,
+      fecha_reserva: fechaStr,
+      hora_inicio: horaStr,
+      usuario_id: 1,
+      estado: 'APROBADO',
+      getDataValue(key: string) { return (this as any)[key]; },
+      set(key: string, val: any) { (this as any)[key] = val; },
+      save: jest.fn().mockResolvedValue(true)
+    };
+
+    jest.spyOn(Reserva, 'findByPk').mockResolvedValue(mockRes as any);
+    jest.spyOn(Auditoria, 'create').mockResolvedValue({} as any);
+
+    const resultado = await ReservaService.cancelarReserva(10, 1, false);
+    expect(resultado.getDataValue('estado')).toBe('CANCELADO');
+    expect(resultado.getDataValue('reembolso')).toBe(0);
+    expect(resultado.getDataValue('penalidad')).toBe(120);
+
+    jest.restoreAllMocks();
+  });
+
+  test('TC-U-22: ReservaService.crearReserva - Debe lanzar error si la cancha se encuentra desactivada', async () => {
+    const { Cancha } = require('../../src/models/Cancha');
+    jest.spyOn(Cancha, 'findByPk').mockResolvedValue({ id: 1, precio_hora: 50, activo: false } as any);
+
+    await expect(
+      ReservaService.crearReserva({ cancha_id: 1, fecha_reserva: '2026-12-01', hora_inicio: '10:00', hora_fin: '12:00', usuario_id: 1 })
+    ).rejects.toThrow('La cancha se encuentra desactivada actualmente');
+
     jest.restoreAllMocks();
   });
 

@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import { Reserva } from '../models/Reserva';
 import { Cancha } from '../models/Cancha';
 import { Horario } from '../models/Horario';
+import { Auditoria } from '../models/Auditoria';
 
 export class ReservaService {
 
@@ -77,6 +78,7 @@ export class ReservaService {
   }) {
     const cancha = await Cancha.findByPk(data.cancha_id);
     if (!cancha) throw new Error('La cancha especificada no existe');
+    if (!cancha.activo) throw new Error('La cancha se encuentra desactivada actualmente');
 
     const fechaActualStr = new Date().toISOString().split('T')[0];
     if (data.fecha_reserva < fechaActualStr) {
@@ -99,7 +101,7 @@ export class ReservaService {
 
     const total_pago = this.calcularTotalPago(cancha.precio_hora, data.hora_inicio, data.hora_fin);
 
-    return await Reserva.create({
+    const nuevaReserva = await Reserva.create({
       usuario_id: data.usuario_id,
       cancha_id: data.cancha_id,
       fecha_reserva: data.fecha_reserva,
@@ -108,5 +110,68 @@ export class ReservaService {
       total_pago,
       estado: 'APROBADO'
     });
+
+    // Registrar en auditoría
+    await Auditoria.create({
+      usuario_id: data.usuario_id,
+      accion: 'RESERVA_CREACIÓN',
+      detalles: `Reserva #${nuevaReserva.id} creada para la cancha #${data.cancha_id} (${cancha.nombre}) por S/. ${total_pago}.`
+    });
+
+    return nuevaReserva;
+  }
+
+  public static async cancelarReserva(reservaId: number, usuarioId: number, esAdmin: boolean): Promise<Reserva> {
+    const reserva = await Reserva.findByPk(reservaId);
+    if (!reserva) {
+      throw new Error('La reserva especificada no existe');
+    }
+
+    if (reserva.getDataValue('estado') === 'CANCELADO') {
+      throw new Error('La reserva ya se encuentra cancelada');
+    }
+
+    if (!esAdmin && reserva.getDataValue('usuario_id') !== usuarioId) {
+      throw new Error('No tiene permisos para cancelar esta reserva');
+    }
+
+    const totalPago = Number(reserva.getDataValue('total_pago'));
+    const fechaReserva = reserva.getDataValue('fecha_reserva');
+    const horaInicio = reserva.getDataValue('hora_inicio');
+
+    // Calcular horas hasta el inicio de la reserva
+    const fechaReservaStart = new Date(`${fechaReserva}T${horaInicio}`);
+    const ahora = new Date();
+    const diffMs = fechaReservaStart.getTime() - ahora.getTime();
+    const diffHoras = diffMs / (1000 * 60 * 60);
+
+    let reembolso = 0;
+    let penalidad = 0;
+
+    // FR-012 Política de cancelación determinista
+    if (diffHoras >= 24) {
+      reembolso = totalPago;
+      penalidad = 0;
+    } else if (diffHoras >= 2) {
+      reembolso = Number((totalPago * 0.5).toFixed(2));
+      penalidad = Number((totalPago * 0.5).toFixed(2));
+    } else {
+      reembolso = 0;
+      penalidad = totalPago;
+    }
+
+    reserva.set('estado', 'CANCELADO');
+    reserva.set('reembolso', reembolso);
+    reserva.set('penalidad', penalidad);
+    await reserva.save();
+
+    // Registrar en auditoría
+    await Auditoria.create({
+      usuario_id: usuarioId,
+      accion: 'CANCELACIÓN',
+      detalles: `Reserva #${reservaId} cancelada por usuario #${usuarioId}. Reembolso: S/. ${reembolso}, Penalidad: S/. ${penalidad}.`
+    });
+
+    return reserva;
   }
 }

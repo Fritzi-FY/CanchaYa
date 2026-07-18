@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors'; // <-- 1. IMPORTACIÓN NUEVA
 import authRoutes from './routes/authRoutes';
 import reservaRoutes from './routes/reservaRoutes';
+import canchaRoutes from './routes/canchaRoutes';
 import { sequelize } from './config/database';
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.json());
 // Inyección de Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/reservas', reservaRoutes);
+app.use('/api/canchas', canchaRoutes);
 
 const PORT = process.env.PORT || 3000;
 
