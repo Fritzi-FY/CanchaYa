@@ -677,7 +677,7 @@ function App() {
                                     <span className="text-3xl">💰</span>
                                     <div>
                                         <h4 className="text-sm font-bold text-white mb-1">Políticas de Reembolso</h4>
-                                        <p className="text-xs text-slate-400">100% de devolución con >24h de anticipación y 50% entre 2 y 24h.</p>
+                                        <p className="text-xs text-slate-400">100% de devolución con &gt;24h de anticipación y 50% entre 2 y 24h.</p>
                                     </div>
                                 </div>
                                 <div className="glass-card p-6 rounded-2xl flex items-start gap-4">
